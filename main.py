@@ -152,6 +152,18 @@ class CTA():
                 i += 1
         # print(self.deg_azi)
 
+    def cal_pos_delta(self):
+        # 推算坐标增量
+        pass
+
+    def cal_pos_closedifference(self):
+        # 计算坐标闭合差
+        pass
+
+    def balance_pos_closedifference(self):
+        # 坐标闭合差平差
+        pass
+
     def calculate(self, route: str):  # 计算主流程，输入闭合导线
         self.route = route.split('-')
         self.n = len(self.route) - 2
@@ -159,6 +171,9 @@ class CTA():
         self.cal_deg_closedifference_limited()
         self.balance_deg_closedifference()
         self.cal_deg_azimuth()
+        self.cal_pos_delta()
+        self.cal_pos_closedifference()
+        self.balance_pos_closedifference()
 
 
 if __name__ == '__main__':
