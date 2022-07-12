@@ -2,8 +2,8 @@ import math
 
 
 class CTA():
-    def __init__(self):
-        self.data, self.points_known = self.Data_read('./JFadjust_all.in2')
+    def __init__(self,path: str):
+        self.data, self.points_known = self.Data_read(path)
         self.deg_src, self.deg_balanced = {}, {}
 
     def ang_dec(self, ang: str):
@@ -176,7 +176,3 @@ class CTA():
         self.balance_pos_closedifference()
 
 
-if __name__ == '__main__':
-    cta = CTA()
-    cta.calculate(input('输入路线'))
-    # print(cta.deg_balanced)
