@@ -166,10 +166,10 @@ class CTA():
 
     def cal_pos_closingerror(self):
         # 计算坐标闭合差
-        _closing_error = {'Fx': 0, 'Fy': 0, 'F': 0, 'K': 0}
+        _closing_error = {'Fx': 0, 'Fy': 0, 'F': 0, 'K': 0, 'Vx': 0, 'Vy': 0}
         for node in self.pos_delta.keys():
-            _closing_error['Fx'] += self.pos_delta[node]['x']
-            _closing_error['Fy'] += self.pos_delta[node]['y']
+            _closing_error['Fx'] += 0 - self.pos_delta[node]['x']
+            _closing_error['Fy'] += 0 - self.pos_delta[node]['y']
         _closing_error['F'] = math.sqrt(math.pow(_closing_error['Fx'], 2) + math.pow(_closing_error['Fy'], 2))
 
         _len = {}
@@ -180,6 +180,8 @@ class CTA():
             _len_sum += _len[self.route[i]]
             i += 1
         _closing_error['K'] = _closing_error['F'] / _len_sum
+        _closing_error['Vx'] = _closing_error['Fx'] / _len_sum
+        _closing_error['Vy'] = _closing_error['Fy'] / _len_sum
 
         self.route_len = _len
         self.pos_closingerror = _closing_error
@@ -189,7 +191,24 @@ class CTA():
     def balance_pos_closingerror(self):
         # 坐标闭合差平差
 
-        pass
+        self.pos_balance = {self.route[1]: self.points_known[self.route[1]]}
+        _pos_V = {}
+        for node in self.route_len.keys():
+            _pos_V[node] = {'x': self.route_len[node] * self.pos_closingerror['Vx'],
+                            'y': self.route_len[node] * self.pos_closingerror['Vy']}
+        i = 2
+        while i < len(self.route) - 1:
+            #print(self.route[i])
+            #print(self.pos_delta[self.route[i-1]])
+
+            self.pos_balance[self.route[i]] = {
+                'x': self.pos_balance[self.route[i - 1]]['x'] + self.pos_delta[self.route[i-1]]['x'] +
+                     _pos_V[self.route[i]]['x'],
+                'y': self.pos_balance[self.route[i - 1]]['y'] + self.pos_delta[self.route[i-1]]['y'] +
+                     _pos_V[self.route[i]]['y']}
+            #print(self.pos_balance[self.route[i]])
+            i += 1
+        #print(self.pos_balance)
 
     def calculate(self, route: str):  # 计算主流程，输入闭合导线
         self.route = route.split('-')
@@ -201,3 +220,7 @@ class CTA():
         self.cal_pos_delta()
         self.cal_pos_closingerror()
         self.balance_pos_closingerror()
+
+
+cta = CTA('./JFadjust_all.in2')
+cta.calculate(input('route?'))
