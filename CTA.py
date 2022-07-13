@@ -2,7 +2,7 @@ import math
 
 
 class CTA():
-    def __init__(self,path: str):
+    def __init__(self, path: str):
         self.data, self.points_known = self.Data_read(path)
         self.deg_src, self.deg_balanced = {}, {}
 
@@ -102,25 +102,25 @@ class CTA():
         # 通过已知点计算后视导线的方位角
         p1 = self.points_known[self.route[0]]
         p2 = self.points_known[self.route[1]]
-        _deg_azi_backview = math.atan2( (p2['y'] - p1['y']), (p2['x'] - p1['x']))
+        _deg_azi_backview = math.atan2((p2['y'] - p1['y']), (p2['x'] - p1['x']))
         _deg_azi_backview = self.rad_ang(_deg_azi_backview)
         if _deg_azi_backview < 0:
             _deg_azi_backview += 360
         self.deg_azi_backview = _deg_azi_backview
 
-        #print(self.deg_azi_backview)
+        # print(self.deg_azi_backview)
         # 计算第一条导线的方位角
         _d = self.data[self.route[1]][self.route[0]]['L'] - self.data[self.route[1]][self.route[2]]['L']
         if _d < 0: _d = 0 - _d
         if self.route[0] == 'T15':
-            _deg = self.deg_azi_backview - _d+180
+            _deg = self.deg_azi_backview - _d + 180
         else:
-            _deg = self.deg_azi_backview + _d-180
+            _deg = self.deg_azi_backview + _d - 180
 
         while _deg > 360:
             _deg = _deg - 360
-        while _deg<0:
-            _deg=_deg+360
+        while _deg < 0:
+            _deg = _deg + 360
         # 方位角数组数据结构：dict={导线起点名：方位角度}
         self.deg_azi = {self.route[1]: _deg}
         # print(_deg)
@@ -131,12 +131,12 @@ class CTA():
             # 因为路线全是顺时针，直接判断内角度数决定左右角
             if self.deg_balanced[node] > 180:  # 左角
                 _deg = self.deg_azi[self.route[i - 1]] - self.deg_balanced[self.route[i]]
-                #print(node)
-                #print('left')
+                # print(node)
+                # print('left')
             elif self.deg_balanced[node] < 180:  # 右角
                 _deg = self.deg_azi[self.route[i - 1]] - self.deg_balanced[self.route[i]]
-                #print(node)
-                #print('right')
+                # print(node)
+                # print('right')
 
             if _deg > 180:
                 _deg = _deg - 180
@@ -145,8 +145,8 @@ class CTA():
 
             while _deg > 360:
                 _deg = _deg - 360
-            while _deg<0:
-                _deg=_deg+360
+            while _deg < 0:
+                _deg = _deg + 360
             self.deg_azi[node] = _deg
 
             if i == len(self.route) - 2:
@@ -156,36 +156,35 @@ class CTA():
 
     def cal_pos_delta(self):
         # 推算坐标增量
-        self.pos_delta={}
+        self.pos_delta = {}
         for node in self.deg_azi.keys():
+            _len = self.data[node][self.route[self.route.index(node) + 1]]['S']
+            _deg = math.radians(self.deg_azi[node])
+            _delta = {'x': (_len * math.cos(_deg)), 'y': (_len * math.sin(_deg))}
+            self.pos_delta[node] = _delta
+        # print(self.pos_delta)
 
-            _len=self.data[node][self.route[self.route.index(node)+1]]['S']
-            _deg=math.radians(self.deg_azi[node])
-            _delta={'x':(_len*math.cos(_deg)),'y':(_len*math.sin(_deg))}
-            self.pos_delta[node]=_delta
-        #print(self.pos_delta)
     def cal_pos_closingerror(self):
         # 计算坐标闭合差
-        _closing_error={'Fx':0,'Fy':0,'F':0,'K':0}
+        _closing_error = {'Fx': 0, 'Fy': 0, 'F': 0, 'K': 0}
         for node in self.pos_delta.keys():
-            _closing_error['Fx']+=self.pos_delta[node]['x']
-            _closing_error['Fy']+=self.pos_delta[node]['y']
-        _closing_error['F']=math.sqrt(math.pow(_closing_error['Fx'],2)+math.pow(_closing_error['Fy'],2))
+            _closing_error['Fx'] += self.pos_delta[node]['x']
+            _closing_error['Fy'] += self.pos_delta[node]['y']
+        _closing_error['F'] = math.sqrt(math.pow(_closing_error['Fx'], 2) + math.pow(_closing_error['Fy'], 2))
 
-        _len={}
-        _len_sum=0
-        i=1
-        while i<len(self.route)-1:
-            _len[self.route[i]]=self.data[self.route[i]][self.route[i+1]]['S']
-            _len_sum+=_len[self.route[i]]
-            i+=1
-        _closing_error['K']=_closing_error['F']/_len_sum
+        _len = {}
+        _len_sum = 0
+        i = 1
+        while i < len(self.route) - 1:
+            _len[self.route[i]] = self.data[self.route[i]][self.route[i + 1]]['S']
+            _len_sum += _len[self.route[i]]
+            i += 1
+        _closing_error['K'] = _closing_error['F'] / _len_sum
 
-        self.route_len=_len
-        self.pos_closingerror=_closing_error
+        self.route_len = _len
+        self.pos_closingerror = _closing_error
 
-        #print(self.pos_closingerror)
-
+        # print(self.pos_closingerror)
 
     def balance_pos_closingerror(self):
         # 坐标闭合差平差
@@ -202,5 +201,3 @@ class CTA():
         self.cal_pos_delta()
         self.cal_pos_closingerror()
         self.balance_pos_closingerror()
-
-
