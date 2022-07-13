@@ -59,40 +59,40 @@ class CTA():
                         datas[node][l[0]][l[1]] = float(l[2])  # 直接赋值
         return datas, points_known  # 返回已知点和数据的字典
 
-    def cal_deg_closedifference(self):
+    def cal_deg_closingerror(self):
         # 计算角度闭合差
         _r = [self.route[len(self.route) - 2]] + self.route[1:]
         i = 1
         _deg = 0
-        sum_closedeg = 0
+        sum_closingdeg = 0
         while i < len(self.route) - 1:
             r = _r[i]
             _deg = self.data[r][_r[i - 1]]['L'] - self.data[r][_r[i + 1]]['L']
             if _deg < 0:
                 _deg += 360
             self.deg_src[r] = _deg
-            sum_closedeg += _deg
+            sum_closingdeg += _deg
             i += 1
-        _dif = sum_closedeg - (self.n - 2) * 180
-        self.deg_closedifference = _dif
+        _dif = sum_closingdeg - (self.n - 2) * 180
+        self.deg_closingerror = _dif
         # print(_dif)
         return _dif
 
-    def cal_deg_closedifference_limited(self):
+    def cal_deg_closingerror_limited(self):
         # 计算角度闭合差限差
         _lim = int(40 * math.sqrt(self.n)) / 10000
         _lim = self.ang_dec(str(_lim))
 
         self.deg_limited = _lim
-        if self.deg_closedifference > self.deg_limited:
+        if self.deg_closingerror > self.deg_limited:
             self.deg_over_limited = True
         else:
             self.deg_over_limited = False
         return self.deg_limited
 
-    def balance_deg_closedifference(self):
+    def balance_deg_closingerror(self):
         # 角度闭合差平差
-        _dif = self.deg_closedifference
+        _dif = self.deg_closingerror
         bal_V = (0 - _dif) / self.n
         for deg in self.deg_src.keys():
             self.deg_balanced[deg] = self.deg_src[deg] + bal_V
@@ -102,22 +102,25 @@ class CTA():
         # 通过已知点计算后视导线的方位角
         p1 = self.points_known[self.route[0]]
         p2 = self.points_known[self.route[1]]
-        _deg_azi_backview = math.atan((p2['y'] - p1['y']) / (p2['x'] - p1['x']))
+        _deg_azi_backview = math.atan2( (p2['y'] - p1['y']), (p2['x'] - p1['x']))
         _deg_azi_backview = self.rad_ang(_deg_azi_backview)
         if _deg_azi_backview < 0:
             _deg_azi_backview += 360
         self.deg_azi_backview = _deg_azi_backview
 
-        # print(self.deg_azi_backview)
+        #print(self.deg_azi_backview)
         # 计算第一条导线的方位角
         _d = self.data[self.route[1]][self.route[0]]['L'] - self.data[self.route[1]][self.route[2]]['L']
         if _d < 0: _d = 0 - _d
         if self.route[0] == 'T15':
-            _deg = self.deg_azi_backview - _d + 180
+            _deg = self.deg_azi_backview - _d+180
         else:
-            _deg = self.deg_azi_backview + _d + 180
+            _deg = self.deg_azi_backview + _d-180
+
         while _deg > 360:
             _deg = _deg - 360
+        while _deg<0:
+            _deg=_deg+360
         # 方位角数组数据结构：dict={导线起点名：方位角度}
         self.deg_azi = {self.route[1]: _deg}
         # print(_deg)
@@ -128,12 +131,12 @@ class CTA():
             # 因为路线全是顺时针，直接判断内角度数决定左右角
             if self.deg_balanced[node] > 180:  # 左角
                 _deg = self.deg_azi[self.route[i - 1]] - self.deg_balanced[self.route[i]]
-                print(node)
-                print('left')
+                #print(node)
+                #print('left')
             elif self.deg_balanced[node] < 180:  # 右角
                 _deg = self.deg_azi[self.route[i - 1]] - self.deg_balanced[self.route[i]]
-                print(node)
-                print('right')
+                #print(node)
+                #print('right')
 
             if _deg > 180:
                 _deg = _deg - 180
@@ -142,37 +145,62 @@ class CTA():
 
             while _deg > 360:
                 _deg = _deg - 360
-            print(_deg)
-
+            while _deg<0:
+                _deg=_deg+360
             self.deg_azi[node] = _deg
 
             if i == len(self.route) - 2:
                 break
             else:
                 i += 1
-        # print(self.deg_azi)
 
     def cal_pos_delta(self):
         # 推算坐标增量
-        pass
+        self.pos_delta={}
+        for node in self.deg_azi.keys():
 
-    def cal_pos_closedifference(self):
+            _len=self.data[node][self.route[self.route.index(node)+1]]['S']
+            _deg=math.radians(self.deg_azi[node])
+            _delta={'x':(_len*math.cos(_deg)),'y':(_len*math.sin(_deg))}
+            self.pos_delta[node]=_delta
+        #print(self.pos_delta)
+    def cal_pos_closingerror(self):
         # 计算坐标闭合差
-        pass
+        _closing_error={'Fx':0,'Fy':0,'F':0,'K':0}
+        for node in self.pos_delta.keys():
+            _closing_error['Fx']+=self.pos_delta[node]['x']
+            _closing_error['Fy']+=self.pos_delta[node]['y']
+        _closing_error['F']=math.sqrt(math.pow(_closing_error['Fx'],2)+math.pow(_closing_error['Fy'],2))
 
-    def balance_pos_closedifference(self):
+        _len={}
+        _len_sum=0
+        i=1
+        while i<len(self.route)-1:
+            _len[self.route[i]]=self.data[self.route[i]][self.route[i+1]]['S']
+            _len_sum+=_len[self.route[i]]
+            i+=1
+        _closing_error['K']=_closing_error['F']/_len_sum
+
+        self.route_len=_len
+        self.pos_closingerror=_closing_error
+
+        #print(self.pos_closingerror)
+
+
+    def balance_pos_closingerror(self):
         # 坐标闭合差平差
+
         pass
 
     def calculate(self, route: str):  # 计算主流程，输入闭合导线
         self.route = route.split('-')
         self.n = len(self.route) - 2
-        self.cal_deg_closedifference()
-        self.cal_deg_closedifference_limited()
-        self.balance_deg_closedifference()
+        self.cal_deg_closingerror()
+        self.cal_deg_closingerror_limited()
+        self.balance_deg_closingerror()
         self.cal_deg_azimuth()
         self.cal_pos_delta()
-        self.cal_pos_closedifference()
-        self.balance_pos_closedifference()
+        self.cal_pos_closingerror()
+        self.balance_pos_closingerror()
 
 

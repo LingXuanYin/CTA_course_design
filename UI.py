@@ -45,4 +45,4 @@ class Ui_MainWindow(object):
         cta = CTA.CTA('./JFadjust_all.in2')
         cta.calculate(self.lineEdit.text())
 
-        print(cta.deg_azi)
+        #print(cta.deg_azi)
