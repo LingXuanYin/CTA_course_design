@@ -198,17 +198,17 @@ class CTA():
                             'y': self.route_len[node] * self.pos_closingerror['Vy']}
         i = 2
         while i < len(self.route) - 1:
-            #print(self.route[i])
-            #print(self.pos_delta[self.route[i-1]])
+            # print(self.route[i])
+            # print(self.pos_delta[self.route[i-1]])
 
             self.pos_balance[self.route[i]] = {
-                'x': self.pos_balance[self.route[i - 1]]['x'] + self.pos_delta[self.route[i-1]]['x'] +
+                'x': self.pos_balance[self.route[i - 1]]['x'] + self.pos_delta[self.route[i - 1]]['x'] +
                      _pos_V[self.route[i]]['x'],
-                'y': self.pos_balance[self.route[i - 1]]['y'] + self.pos_delta[self.route[i-1]]['y'] +
+                'y': self.pos_balance[self.route[i - 1]]['y'] + self.pos_delta[self.route[i - 1]]['y'] +
                      _pos_V[self.route[i]]['y']}
-            #print(self.pos_balance[self.route[i]])
+            # print(self.pos_balance[self.route[i]])
             i += 1
-        #print(self.pos_balance)
+        print(self.pos_balance)
 
     def calculate(self, route: str):  # 计算主流程，输入闭合导线
         self.route = route.split('-')
@@ -221,6 +221,5 @@ class CTA():
         self.cal_pos_closingerror()
         self.balance_pos_closingerror()
 
-
-cta = CTA('./JFadjust_all.in2')
-cta.calculate(input('route?'))
+# cta = CTA('./JFadjust_all.in2')
+# cta.calculate(input('route?'))
