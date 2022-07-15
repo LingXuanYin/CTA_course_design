@@ -1,4 +1,10 @@
+import json
 import math
+import os
+
+import matplotlib.pyplot as plt
+import xlrd
+import xlutils.copy
 
 
 class CTA():
@@ -191,7 +197,10 @@ class CTA():
     def balance_pos_closingerror(self):
         # 坐标闭合差平差
 
-        self.pos_balance = {self.route[1]: self.points_known[self.route[1]]}
+        self.pos_balance = {self.route[0]: self.points_known[self.route[0]],
+                            self.route[1]: self.points_known[self.route[1]]}
+        self.pos_balance[self.route[0]]['if_known'] = True
+        self.pos_balance[self.route[1]]['if_known'] = True
         _pos_V = {}
         for node in self.route_len.keys():
             _pos_V[node] = {'x': self.route_len[node] * self.pos_closingerror['Vx'],
@@ -205,10 +214,12 @@ class CTA():
                 'x': self.pos_balance[self.route[i - 1]]['x'] + self.pos_delta[self.route[i - 1]]['x'] +
                      _pos_V[self.route[i]]['x'],
                 'y': self.pos_balance[self.route[i - 1]]['y'] + self.pos_delta[self.route[i - 1]]['y'] +
-                     _pos_V[self.route[i]]['y']}
+                     _pos_V[self.route[i]]['y'],
+                'if_known': False}
             # print(self.pos_balance[self.route[i]])
             i += 1
-        print(self.pos_balance)
+        self.pos_result = self.pos_balance
+        # print(self.pos_balance)
 
     def calculate(self, route: str):  # 计算主流程，输入闭合导线
         self.route = route.split('-')
@@ -220,6 +231,81 @@ class CTA():
         self.cal_pos_delta()
         self.cal_pos_closingerror()
         self.balance_pos_closingerror()
+    def mk_XSL(self):
+        #初始化表格
+        path=os.path.join(os.getcwd(),'result.xls')
+        json_s=open(os.path.join(os.getcwd(),'xls_data.json'),'r',encoding='UTF-8').read()
+        rb=xlrd.open_workbook(path)
+        wb=xlutils.copy.copy(rb)
+        ws=wb.get_sheet(0)
+        xls_initdata=json.loads(json_s)
+        for data in xls_initdata.keys():
+            _x=int(data.split(',')[0])-1
+            _y=int(data.split(',')[1])-1
+            _d=xls_initdata[data]
+            ws.write(_x,_y,_d)
 
-# cta = CTA('./JFadjust_all.in2')
-# cta.calculate(input('route?'))
+        #写入点号以及对应数据
+        for node in self.route:
+            if node==self.route[0]:
+                pass
+            else:
+                #写入点号数据
+                _x=2*self.route.index(node)
+                _y=0
+                _d=node
+                ws.write(_x,_y,_d)
+                #最后一列点号
+                _y=11
+                ws.write(_x,_y,_d)
+        f=False
+        for node in self.route:
+            if node == self.route[0]:
+                pass
+            else:
+                #写入转折角
+                _d=self.deg_src[node]
+                _y=1
+                ws.write(_x,_y,_d)
+                #写入改正后转折角
+                _d=self.deg_balanced[node]
+                _y=2
+                ws.write(_x,_y,_d)
+                #写入导线方位角
+
+        ws.write(2*len(self.route)-2,0,self.route[len(self.route)-1])
+        #写入求和行
+        ws.write(2*len(self.route),0,'∑')
+        wb.save(path)
+    def draw(self):
+        _x=[]
+        _y=[]
+        plt.figure(figsize=(6.4,9.6))
+
+        for node in self.route:
+            _x.append(self.pos_result[node]['x'])
+            _y.append(self.pos_result[node]['y'])
+        #print(_x)
+        #print(_y)
+        for i in range(len(_x)):
+            if i==0 or i==1 or i==len(_x)-1:
+                plt.scatter(_y[i], _x[i],marker='^',edgecolors='red',c='w',linewidths=2)
+            else:
+                plt.scatter(_y[i],_x[i],marker='o',edgecolors='k',c='w',linewidths=2)
+            plt.text(_y[i]+5,_x[i]+5,self.route[i])
+        plt.plot(_y,_x,c='k',lw=1)
+        ax = plt.gca()
+        ax.set_aspect((max(_x)/max(_y))*0.15)
+        ax.spines['bottom'].set_linewidth(0) ###设置坐标轴的粗细
+        ax.spines['left'].set_linewidth(0)
+        ax.spines['top'].set_linewidth(0)
+        ax.spines['right'].set_linewidth(0)
+        plt.axes().get_xaxis().set_visible(False)  # 隐藏x坐标轴
+        plt.axes().get_yaxis().set_visible(False)  # 隐藏y坐标轴
+        plt.savefig(os.path.join(os.getcwd(),'sketch.png'))
+        plt.show()
+
+cta = CTA('./JFadjust_all.in2')
+cta.calculate(input('route?'))
+cta.mk_XSL()
+#cta.draw()
