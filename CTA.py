@@ -174,8 +174,8 @@ class CTA():
         # 计算坐标闭合差
         _closing_error = {'Fx': 0, 'Fy': 0, 'F': 0, 'K': 0, 'Vx': 0, 'Vy': 0}
         for node in self.pos_delta.keys():
-            _closing_error['Fx'] += 0 - self.pos_delta[node]['x']
-            _closing_error['Fy'] += 0 - self.pos_delta[node]['y']
+            _closing_error['Fx'] +=  self.pos_delta[node]['x']
+            _closing_error['Fy'] +=  self.pos_delta[node]['y']
         _closing_error['F'] = math.sqrt(math.pow(_closing_error['Fx'], 2) + math.pow(_closing_error['Fy'], 2))
 
         _len = {}
@@ -186,8 +186,8 @@ class CTA():
             _len_sum += _len[self.route[i]]
             i += 1
         _closing_error['K'] = _closing_error['F'] / _len_sum
-        _closing_error['Vx'] = _closing_error['Fx'] / _len_sum
-        _closing_error['Vy'] = _closing_error['Fy'] / _len_sum
+        _closing_error['Vx'] = (0-_closing_error['Fx']) / _len_sum
+        _closing_error['Vy'] = (0-_closing_error['Fy']) / _len_sum
 
         self.route_len = _len
         self.pos_closingerror = _closing_error
@@ -218,6 +218,7 @@ class CTA():
                 'if_known': False}
             # print(self.pos_balance[self.route[i]])
             i += 1
+        self.pos_V=_pos_V
         self.pos_result = self.pos_balance
         # print(self.pos_balance)
 
@@ -258,24 +259,102 @@ class CTA():
                 #最后一列点号
                 _y=11
                 ws.write(_x,_y,_d)
-        f=False
-        for node in self.route:
-            if node == self.route[0]:
-                pass
-            else:
-                #写入转折角
-                _d=self.deg_src[node]
-                _y=1
-                ws.write(_x,_y,_d)
-                #写入改正后转折角
-                _d=self.deg_balanced[node]
-                _y=2
-                ws.write(_x,_y,_d)
-                #写入导线方位角
+        #写入转折角，改正后转折角
+        _route=self.route[2:len(self.route)]
+        for node in _route:
+            _x = 2 * _route.index(node)+4
+            _y = 1
+            _d = self.deg_src[node]
+            ws.write(_x, _y, _d)
+            _y=2
+            _d=self.deg_balanced[node]
+            ws.write(_x, _y, _d)
+        _route=self.route[1:len(self.route)]
+        #写入方向角
+        print(_route)
+        for node in _route:
 
+            _x = 2 * _route.index(node)+3
+            _y = 3
+            _d = self.deg_azi[node]
+            ws.write(_x, _y, _d)
+            #写入边长
+            _y=4
+            _d=self.route_len[node]
+            ws.write(_x, _y, _d)
+            #写入坐标增量，先x再y
+            _y=5
+            _d=self.pos_delta[node]['x']
+            ws.write(_x, _y, _d)
+            _y=6
+            _d=self.pos_delta[node]['y']
+            ws.write(_x, _y, _d)
+            #写入改正后坐标
+            _y=7
+            _d=self.pos_delta[node]['x']+self.pos_V[node]['x']
+            ws.write(_x, _y, _d)
+            _y=8
+            _d=self.pos_delta[node]['y']+self.pos_V[node]['y']
+            ws.write(_x, _y, _d)
+
+            #写入结果坐标
+            _x = 2 * _route.index(node)+2
+
+            _y=9
+            _d=self.pos_result[node]['x']
+            ws.write(_x, _y, _d)
+            _y=10
+            _d=self.pos_result[node]['y']
+            ws.write(_x, _y, _d)
+        #最后一行方向角
+        ws.write(2*(len(_route)-1)+3,3,self.deg_azi[_route[len(_route)-1]])
+        #最后一行结果坐标
+        #ws.write(2*(len(_route)-1)+2,9,self.pos_result[_route[len(_route)-1]]['x'])
+        #ws.write(2*(len(_route)-1)+2,10,self.pos_result[_route[len(_route)-1]]['y'])
+        #最后一行点号
         ws.write(2*len(self.route)-2,0,self.route[len(self.route)-1])
+
         #写入求和行
         ws.write(2*len(self.route),0,'∑')
+        #∑β测
+        _deg=0
+        for deg in self.deg_src.keys():
+            _deg+=self.deg_src[deg]
+        ws.write(2*len(self.route),1,_deg)
+        #∑β理
+        ws.write(2*len(self.route),2,(self.n-2)*180)
+        #∑边长
+        _l=0
+        for long in self. route_len.keys():
+            _l+=self.route_len[long]
+        ws.write(2*len(self.route),4,_l)
+        #∑坐标增量
+        _dx,_dy=0,0
+        for node in self.pos_delta.keys():
+            _dx+=self.pos_delta[node]['x']
+            _dy+=self.pos_delta[node]['y']
+        ws.write(2*len(self.route),5,_dx)
+        ws.write(2*len(self.route),6,_dy)
+        #∑改正后坐标增量
+        ws.write(2*len(self.route),7,0)
+        ws.write(2*len(self.route),8,0)
+        #写入其他数据
+        #∑β理
+        ws.write(2,12,(self.n-2)*180)
+        #∑β测
+        ws.write(2,13,_deg)
+        #ƒβ
+        ws.write(2,14,_deg-(self.n-2)*180)
+        #ƒβ容
+        ws.write(2,15,self.deg_limited)
+        #ƒx和ƒy
+        ws.write(2,16,self.pos_closingerror['Fx'])
+        ws.write(2,17,self.pos_closingerror['Fy'])
+        #ƒ
+        ws.write(2,18,self.pos_closingerror['F'])
+        #K
+        ws.write(2,19,self.pos_closingerror['K'])
+
         wb.save(path)
     def draw(self):
         _x=[]
@@ -305,7 +384,7 @@ class CTA():
         plt.savefig(os.path.join(os.getcwd(),'sketch.png'))
         plt.show()
 
-cta = CTA('./JFadjust_all.in2')
-cta.calculate(input('route?'))
-cta.mk_XSL()
+#cta = CTA('./JFadjust_all.in2')
+#cta.calculate(input('route?'))
+#cta.mk_XSL()
 #cta.draw()

@@ -77,16 +77,16 @@ class Ui_MainWindow(object):
         else:
             self.RaiseError('Error','请输入需要平差的闭合导线')
             return
-        cta.mk_XSL()
+        #cta.mk_XSL()
 
         try:
             cta.mk_XSL()
         except Exception as e:
-            self.RaiseError( '绘图错误', str(e))
+            self.RaiseError( '制表错误', str(e))
             return
         try:
             cta.draw()
 
         except Exception as e:
-            self.RaiseError( '制表错误', str(e))
+            self.RaiseError( '绘图错误', str(e))
             return
